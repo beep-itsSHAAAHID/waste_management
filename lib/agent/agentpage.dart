@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../agent/my_profile_page.dart';
-import '../agent/order_history_page.dart';
 
 
 class CollectionAgentPage extends StatefulWidget {
@@ -11,6 +11,11 @@ class CollectionAgentPage extends StatefulWidget {
 
 class _CollectionAgentPageState extends State<CollectionAgentPage> {
   late Future<List<Map<String, dynamic>>> futureOrders;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool inProgress = false;
+  bool picked = false;
+  bool pending = false;
+  bool isOnlinePayment = false; // Track if online payment is selected
 
   @override
   void initState() {
@@ -29,8 +34,7 @@ class _CollectionAgentPageState extends State<CollectionAgentPage> {
   }
 
   void _signOut(BuildContext context) {
-    // Implement your sign-out logic here
-    Navigator.popUntil(context, ModalRoute.withName('/'));  // Adjust according to your app's navigation structure
+    Navigator.popUntil(context, ModalRoute.withName('/'));
   }
 
   @override
@@ -58,7 +62,7 @@ class _CollectionAgentPageState extends State<CollectionAgentPage> {
                   ),
                   SizedBox(height: 20),
                   Text(
-                    'Delivery Boy Name',  // You can make this dynamic
+                    'Delivery Boy ',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -92,12 +96,153 @@ class _CollectionAgentPageState extends State<CollectionAgentPage> {
                         String details = "Address: ${order['address']}, District: ${order['district']}, State: ${order['state']}, Pincode: ${order['pincode']}";
                         String analysisDetails = "Prediction: ${order['analysisResults']['most_likely_prediction']}, Probability: ${(order['analysisResults']['probability'] ?? 0).toStringAsFixed(2)}, Category: ${order['analysisResults']['category']}";
 
-                        return ListTile(
-                          title: Text(
-                            'Order ${index + 1}',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                        return GestureDetector(
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return StatefulBuilder(
+                                  builder: (BuildContext context, setState) {
+                                    return AlertDialog(
+                                      title: Text('Update Order Status'),
+                                      content: SingleChildScrollView(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            CheckboxListTile(
+                                              title: Text('In Progress'),
+                                              value: inProgress,
+                                              onChanged: (bool? value) {
+                                                setState(() {
+                                                  inProgress = value!;
+                                                  if (value!) {
+                                                    picked = false;
+                                                    pending = false;
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                            CheckboxListTile(
+                                              title: Text('Picked'),
+                                              value: picked,
+                                              onChanged: (bool? value) {
+                                                setState(() {
+                                                  picked = value!;
+                                                  if (value!) {
+                                                    inProgress = false;
+                                                    pending = false;
+                                                    if (picked) {
+                                                      showDialog(
+                                                        context: context,
+                                                        builder: (BuildContext context) {
+                                                          return AlertDialog(
+                                                            title: Text('Payment'),
+                                                            content: SingleChildScrollView(
+                                                              child: Column(
+                                                                mainAxisSize: MainAxisSize.min,
+                                                                children: [
+                                                                  Text('Select Payment Method:'),
+                                                                  ElevatedButton(
+                                                                    onPressed: () {
+                                                                      setState(() {
+                                                                        isOnlinePayment = true;
+                                                                      });
+                                                                      Navigator.pop(context);
+                                                                    },
+                                                                    child: Text('Online'),
+                                                                  ),
+                                                                  ElevatedButton(
+                                                                    onPressed: () {
+                                                                      setState(() {
+                                                                        isOnlinePayment = false;
+                                                                      });
+                                                                      Navigator.pop(context);
+                                                                    },
+                                                                    child: Text('Offline'),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                            actions: <Widget>[
+                                                              ElevatedButton(
+                                                                onPressed: isOnlinePayment || !picked ? null : () {
+                                                                  // Update order status to 'Paid' only if online payment is selected and order is picked
+                                                                  Navigator.pop(context);
+                                                                },
+                                                                child: Text('Paid'),
+                                                              ),
+                                                            ],
+                                                          );
+                                                        },
+                                                      );
+                                                    }
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                            CheckboxListTile(
+                                              title: Text('Pending'),
+                                              value: pending,
+                                              onChanged: (bool? value) {
+                                                setState(() {
+                                                  pending = value!;
+                                                  if (value!) {
+                                                    inProgress = false;
+                                                    picked = false;
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                            SizedBox(height: 8),
+                                            ElevatedButton(
+                                              onPressed: () {
+                                                // Update order status based on checkbox values
+                                                if (inProgress) {
+                                                  // Change order status to 'In Progress'
+                                                }
+                                                if (picked) {
+                                                  // Change order status to 'Picked'
+                                                }
+                                                if (pending) {
+                                                  // Change order status to 'Pending'
+                                                }
+                                              },
+                                              child: Text('Update Status'),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
+                            );
+                          },
+                          child: Container(
+                            padding: EdgeInsets.all(10),
+                            margin: EdgeInsets.symmetric(vertical: 5, horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Order ${index + 1}',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                SizedBox(height: 5),
+                                Text(details),
+                                SizedBox(height: 5),
+                                Text(
+                                  analysisDetails,
+                                  style: TextStyle(fontStyle: FontStyle.italic),
+                                ),
+                              ],
+                            ),
                           ),
-                          subtitle: Text("$details | $analysisDetails"),
                         );
                       },
                     );
@@ -113,23 +258,23 @@ class _CollectionAgentPageState extends State<CollectionAgentPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => OrderHistoryPage()),
-                  );
-                },
-                child: Text('Order History'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => MyProfilePage()),
-                  );
-                },
-                child: Text('My Profile'),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.lightGreen, // Light green background color
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => MyProfilePage(userEmail: _auth.currentUser!.email!)),
+                    );
+                  },
+                  child: Text(
+                    'My Profile',
+                    style: TextStyle(color: Colors.black), // Black text color
+                  ),
+                ),
               ),
             ],
           ),

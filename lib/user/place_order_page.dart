@@ -42,7 +42,7 @@ class _PlaceOrderPageState extends State<PlaceOrderPage> {
     }
 
     try {
-      var uri = Uri.parse('http://192.168.2.103:5000/predict');
+      var uri = Uri.parse('http://192.168.1.8:5000/predict');
       var request = http.MultipartRequest('POST', uri)
         ..files.add(await http.MultipartFile.fromPath('file', _imageFile!.path));
       var streamedResponse = await request.send();
